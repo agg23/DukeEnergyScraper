@@ -7,7 +7,7 @@ import datetime
 # Mode 2: dailyEnergy
 # Mode 3: hourlyEnergyUse
 
-class Scraper(object):
+class DukeEnergyScraper(object):
 	class Mode(Enum):
 		averageEnergy = 1
 		dailyEnergy = 2
@@ -50,7 +50,7 @@ class Scraper(object):
 		super()
 
 	def daily(self, periodType, date):
-		response = self.request(self.data, Scraper.Mode.dailyEnergy, date, periodType = periodType)
+		response = self.request(self.data, DukeEnergyScraper.Mode.dailyEnergy, date, periodType = periodType)
 
 		if not response or "series1" not in response or "exportTickseries" not in response:
 			# Failed to load data
@@ -67,7 +67,7 @@ class Scraper(object):
 		return responseData
 
 	def hourly(self, date):
-		response = self.request(self.data, Scraper.Mode.hourlyEnergy, date)
+		response = self.request(self.data, DukeEnergyScraper.Mode.hourlyEnergy, date)
 
 		if not response or "series1" not in response:
 			# Failed to load data
@@ -77,7 +77,7 @@ class Scraper(object):
 		return response["series1"]
 
 	def average(self, periodType, date):
-		response = self.request(self.data, Scraper.Mode.averageEnergy, date, periodType = periodType)
+		response = self.request(self.data, DukeEnergyScraper.Mode.averageEnergy, date, periodType = periodType)
 
 		if not response or "series1" not in response or "exportTickseries" not in response:
 			# Failed to load data
@@ -96,11 +96,11 @@ class Scraper(object):
 	def request(self, data, mode, date, periodType = None, previouslyTried = False):
 		chartName = ""
 
-		if mode == Scraper.Mode.averageEnergy:
+		if mode == DukeEnergyScraper.Mode.averageEnergy:
 			chartName = "averageEnergyByDayOfWeek"
-		elif mode == Scraper.Mode.dailyEnergy:
+		elif mode == DukeEnergyScraper.Mode.dailyEnergy:
 			chartName = "dailyEnergy"
-		elif mode == Scraper.Mode.hourlyEnergy:
+		elif mode == DukeEnergyScraper.Mode.hourlyEnergy:
 			chartName = "hourlyEnergyUse"
 			periodType = "day"
 
