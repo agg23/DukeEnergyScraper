@@ -1,6 +1,7 @@
 from enum import Enum
 
 import requests
+import datetime
 
 # Mode 1: averageEnergyByDayOfWeek
 # Mode 2: dailyEnergy
@@ -18,17 +19,64 @@ class Scraper(object):
 		"rememberMe": False
 	}
 
-	def __init__(self, username, password):
+	def __init__(self, username, password, srcSrvId, srcAcctId, srcAcctId2, formattedAccountNumber, streetAddress1, streetAddress2, city, state, zip, hubAcctId):
 		self.session = requests.Session()
 		self.loggedIn = False
 		self.username = username
 		self.password = password
+
+		self.data = {
+			"srcSrvId": srcSrvId,
+			"channel": "OLS",
+			"srcAcctId": srcAcctId,
+			"srcAcctId2": srcAcctId2,
+			"formattedAccountNumber": formattedAccountNumber,
+			"streetAddress1": streetAddress1,
+			"streetAddress2": streetAddress2,
+			"city": city,
+			"state": state,
+			"zip": zip,
+			"unitOfMeasure": "",
+			"serviceType": "Electric",
+			"hubAcctId": hubAcctId,
+			"srcSysCd": "CMSW",
+			"totalOnPeak": "",
+			"totalOffPeak": "",
+			"maxOnPeak": "",
+			"maxOffPeak": "",
+			"segment": "RES"
+		}
+
 		super()
 
-	def daily(self, forDate):
-		pass
+	def daily(self, periodType, date):
+		response = self.request(self.data, Scraper.Mode.dailyEnergy, date, periodType = periodType)
 
-	def request(self, data, mode, forDate, previouslyTried = False):
+		if not response or "series1" not in response or "exportTickseries" not in response:
+			# Failed to load data
+			print("Failed to load daily data")
+			return None
+
+		data = response["series1"]
+
+		responseData = {}
+
+		for index, dataDate in enumerate(response["exportTickseries"]):
+			responseData[dataDate] = data[index]
+
+		return responseData
+
+	def hourly(self, date):
+		response = self.request(self.data, Scraper.Mode.hourlyEnergy, date)
+
+		if not response or "series1" not in response:
+			# Failed to load data
+			print("Failed to load hourly data")
+			return None
+
+		return response["series1"]
+
+	def request(self, data, mode, date, periodType = None, previouslyTried = False):
 		chartName = ""
 
 		if mode == Scraper.Mode.averageEnergy:
@@ -37,11 +85,14 @@ class Scraper(object):
 			chartName = "dailyEnergy"
 		elif mode == Scraper.Mode.hourlyEnergy:
 			chartName = "hourlyEnergyUse"
+			periodType = "day"
 
 		data["chartName"] = chartName
 		data["Mode"] = mode.value
+		data["date"] = date.strftime("%m/%d/%Y")
 
-		print(data)
+		if periodType:
+			data["periodType"] = periodType
 
 		if not self.loggedIn:
 			self.login()
@@ -60,11 +111,13 @@ class Scraper(object):
 			self.login()
 			# Try request again if hasn't been previously tried
 			if not previouslyTried:
-				self.request(mode, forDate, previouslyTried = True)
+				return self.request(mode, forDate, previouslyTried = True)
+
+			return None
 
 	def login(self):
 		print("Logging in")
-		
+
 		createCookie = self.session.post("https://www.duke-energy.com/api/Login/CreateCookie", data=self.createCookieData, headers=self.headers, timeout=10)
 
 		if createCookie.status_code != 200:
@@ -100,3 +153,5 @@ class Scraper(object):
 			return
 
 		self.loggedIn = True
+
+		print("Logged in")
