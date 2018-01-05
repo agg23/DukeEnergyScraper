@@ -76,6 +76,23 @@ class Scraper(object):
 
 		return response["series1"]
 
+	def average(self, periodType, date):
+		response = self.request(self.data, Scraper.Mode.averageEnergy, date, periodType = periodType)
+
+		if not response or "series1" not in response or "exportTickseries" not in response:
+			# Failed to load data
+			print("Failed to load average data")
+			return None
+
+		data = response["series1"]
+
+		responseData = {}
+
+		for index, dataDate in enumerate(response["exportTickseries"]):
+			responseData[dataDate] = data[index]
+
+		return responseData
+
 	def request(self, data, mode, date, periodType = None, previouslyTried = False):
 		chartName = ""
 
